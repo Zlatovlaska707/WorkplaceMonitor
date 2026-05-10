@@ -24,14 +24,13 @@ public class MqttSettings extends AppCompatActivity {
     private static final String KEY_PASSWORD = "Password";
     private static final String KEY_ACCEL_ENABLED = "SensorAccelerometerEnabled";
     private static final String KEY_LIGHT_ENABLED = "SensorLightEnabled";
-    private static final String KEY_PROXIMITY_ENABLED = "SensorProximityEnabled";
     private static final String KEY_STEPS_ENABLED = "SensorStepCounterEnabled";
     private static final String KEY_MIC_ENABLED = "SensorMicrophoneEnabled";
     private static final String KEY_PUBLISH_INTERVAL_MS = "PublishIntervalMs";
 
     private EditText broker, port, topic, username, password;
     private EditText publishIntervalMs;
-    private SwitchCompat accelSwitch, lightSwitch, proximitySwitch, stepCounterSwitch, micSwitch;
+    private SwitchCompat accelSwitch, lightSwitch, stepCounterSwitch, micSwitch;
     private Button connect;
     private String serverURI;
     private String mqttTopic;
@@ -49,7 +48,6 @@ public class MqttSettings extends AppCompatActivity {
         publishIntervalMs = findViewById(R.id.txtPublishIntervalMs);
         accelSwitch = findViewById(R.id.switchAccelerometer);
         lightSwitch = findViewById(R.id.switchLight);
-        proximitySwitch = findViewById(R.id.switchProximity);
         stepCounterSwitch = findViewById(R.id.switchStepCounter);
         micSwitch = findViewById(R.id.switchMicrophone);
         connect = findViewById(R.id.btnConnect);
@@ -82,7 +80,6 @@ public class MqttSettings extends AppCompatActivity {
 
         accelSwitch.setChecked(sharedPref.getBoolean(KEY_ACCEL_ENABLED, true));
         lightSwitch.setChecked(sharedPref.getBoolean(KEY_LIGHT_ENABLED, true));
-        proximitySwitch.setChecked(sharedPref.getBoolean(KEY_PROXIMITY_ENABLED, true));
         stepCounterSwitch.setChecked(sharedPref.getBoolean(KEY_STEPS_ENABLED, true));
         micSwitch.setChecked(sharedPref.getBoolean(KEY_MIC_ENABLED, true));
 
@@ -158,7 +155,6 @@ public class MqttSettings extends AppCompatActivity {
         editor.putString(KEY_PASSWORD, password.getText().toString());
         editor.putBoolean(KEY_ACCEL_ENABLED, accelSwitch.isChecked());
         editor.putBoolean(KEY_LIGHT_ENABLED, lightSwitch.isChecked());
-        editor.putBoolean(KEY_PROXIMITY_ENABLED, proximitySwitch.isChecked());
         editor.putBoolean(KEY_STEPS_ENABLED, stepCounterSwitch.isChecked());
         editor.putBoolean(KEY_MIC_ENABLED, micSwitch.isChecked());
         editor.putLong(KEY_PUBLISH_INTERVAL_MS, parsedIntervalMs);

@@ -90,15 +90,6 @@
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/proximityValue"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="P (Proximity): 0.0 cm"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <TextView
             android:id="@+id/stepsValue"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -121,7 +112,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Payload: X:0.0,Y:0.0,Z:0.0,L:0.0,P:0.0,S:0,M:0"
+            android:text="Payload: X:0.0,Y:0.0,Z:0.0,L:0.0,S:0,M:0"
             android:textSize="14sp" />
 
         <LinearLayout

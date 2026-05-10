@@ -90,13 +90,6 @@
             android:text="Light (L)" />
 
         <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switchProximity"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="Proximity (P)" />
-
-        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switchStepCounter"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -51,7 +51,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String KEY_PASSWORD = "Password";
     private static final String KEY_ACCEL_ENABLED = "SensorAccelerometerEnabled";
     private static final String KEY_LIGHT_ENABLED = "SensorLightEnabled";
-    private static final String KEY_PROXIMITY_ENABLED = "SensorProximityEnabled";
     private static final String KEY_STEPS_ENABLED = "SensorStepCounterEnabled";
     private static final String KEY_MIC_ENABLED = "SensorMicrophoneEnabled";
     private static final String KEY_PUBLISH_INTERVAL_MS = "PublishIntervalMs";
@@ -60,14 +59,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor lightSensor;
-    private Sensor proximitySensor;
     private Sensor stepCounterSensor;
 
     private MqttAndroidClient client;
     private MediaRecorder mediaRecorder;
     private boolean isMicRecorderStarted = false;
 
-    private TextView xVal, yVal, zVal, lightVal, proximityVal, stepsVal, micVal, payloadPreviewVal;
+    private TextView xVal, yVal, zVal, lightVal, stepsVal, micVal, payloadPreviewVal;
     private Button settings, btnStart, btnStop, btnAboutUs;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -76,7 +74,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean isPublishing = false;
     private boolean accelerometerEnabled = true;
     private boolean lightEnabled = true;
-    private boolean proximityEnabled = true;
     private boolean stepCounterEnabled = true;
     private boolean microphoneEnabled = true;
     private long publishIntervalMs = 5000L;
@@ -85,7 +82,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private float latestY = 0f;
     private float latestZ = 0f;
     private float latestLight = 0f;
-    private float latestProximity = 0f;
     private long latestStepsDelta = 0L;
     private float baseStepCounterValue = -1f;
     private int latestMicPeak = 0;
@@ -100,7 +96,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Available sensors (may be null on some devices)
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
-        proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
         stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
 
         // Text View
@@ -108,7 +103,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         yVal = findViewById(R.id.yVlaue);
         zVal = findViewById(R.id.zValue);
         lightVal = findViewById(R.id.lightValue);
-        proximityVal = findViewById(R.id.proximityValue);
         stepsVal = findViewById(R.id.stepsValue);
         micVal = findViewById(R.id.micValue);
         payloadPreviewVal = findViewById(R.id.payloadPreviewValue);
@@ -135,9 +129,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 break;
             case Sensor.TYPE_LIGHT:
                 latestLight = event.values[0];
-                break;
-            case Sensor.TYPE_PROXIMITY:
-                latestProximity = event.values[0];
                 break;
             case Sensor.TYPE_STEP_COUNTER:
                 float currentTotalSteps = event.values[0];
@@ -345,7 +336,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         float sendY = (accelerometerEnabled && accelerometer != null) ? latestY : 0f;
         float sendZ = (accelerometerEnabled && accelerometer != null) ? latestZ : 0f;
         float sendLight = (lightEnabled && lightSensor != null) ? latestLight : 0f;
-        float sendProximity = (proximityEnabled && proximitySensor != null) ? latestProximity : 0f;
         long sendSteps = (stepCounterEnabled && stepCounterSensor != null) ? latestStepsDelta : 0L;
         int sendMic = microphoneEnabled ? latestMicPeak : 0;
 
@@ -353,7 +343,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 "Y:" + sendY + "," +
                 "Z:" + sendZ + "," +
                 "L:" + sendLight + "," +
-                "P:" + sendProximity + "," +
                 "S:" + sendSteps + "," +
                 "M:" + sendMic;
         payloadPreviewVal.setText("Payload: " + message);
@@ -430,7 +419,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         SharedPreferences sharedPref = this.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         accelerometerEnabled = sharedPref.getBoolean(KEY_ACCEL_ENABLED, true);
         lightEnabled = sharedPref.getBoolean(KEY_LIGHT_ENABLED, true);
-        proximityEnabled = sharedPref.getBoolean(KEY_PROXIMITY_ENABLED, true);
         stepCounterEnabled = sharedPref.getBoolean(KEY_STEPS_ENABLED, true);
         microphoneEnabled = sharedPref.getBoolean(KEY_MIC_ENABLED, true);
         publishIntervalMs = readPublishIntervalMs(sharedPref);
@@ -471,9 +459,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         if (lightEnabled && lightSensor != null) {
             sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_NORMAL);
-        }
-        if (proximityEnabled && proximitySensor != null) {
-            sensorManager.registerListener(this, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
         if (stepCounterEnabled && stepCounterSensor != null) {
             sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL);
@@ -587,9 +572,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         String lightText = (lightEnabled && lightSensor != null)
                 ? String.format(Locale.US, "L (Light): %.2f lx", latestLight)
                 : "L (Light): N/A";
-        String proximityText = (proximityEnabled && proximitySensor != null)
-                ? String.format(Locale.US, "P (Proximity): %.2f cm", latestProximity)
-                : "P (Proximity): N/A";
         String stepText = (stepCounterEnabled && stepCounterSensor != null)
                 ? String.format(Locale.US, "S (Steps): %d", latestStepsDelta)
                 : "S (Steps): N/A";
@@ -598,19 +580,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 : "M (Mic peak): N/A";
 
         lightVal.setText(lightText);
-        proximityVal.setText(proximityText);
         stepsVal.setText(stepText);
         micVal.setText(micText);
 
         payloadPreviewVal.setText(
                 String.format(
                         Locale.US,
-                        "Payload: X:%.2f,Y:%.2f,Z:%.2f,L:%.2f,P:%.2f,S:%d,M:%d",
+                        "Payload: X:%.2f,Y:%.2f,Z:%.2f,L:%.2f,S:%d,M:%d",
                         latestX,
                         latestY,
                         latestZ,
                         latestLight,
-                        latestProximity,
                         latestStepsDelta,
                         latestMicPeak
                 )
