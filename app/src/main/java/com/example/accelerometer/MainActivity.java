@@ -19,6 +19,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.Locale;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -66,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MediaRecorder mediaRecorder;
     private boolean isMicRecorderStarted = false;
 
-    private TextView xVal, yVal, zVal;
+    private TextView xVal, yVal, zVal, lightVal, proximityVal, stepsVal, micVal, payloadPreviewVal;
     private Button settings, btnStart, btnStop, btnAboutUs;
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
@@ -106,12 +107,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         xVal = findViewById(R.id.xValue);
         yVal = findViewById(R.id.yVlaue);
         zVal = findViewById(R.id.zValue);
+        lightVal = findViewById(R.id.lightValue);
+        proximityVal = findViewById(R.id.proximityValue);
+        stepsVal = findViewById(R.id.stepsValue);
+        micVal = findViewById(R.id.micValue);
+        payloadPreviewVal = findViewById(R.id.payloadPreviewValue);
 
         // Buttons
         settings = findViewById(R.id.btnSettings);
         btnStart = findViewById(R.id.btnStart);
         btnStop = findViewById(R.id.btnStop);
         btnAboutUs = findViewById(R.id.btnAboutUs);
+
+        updateSensorStatsUi();
     }
 
     @Override
@@ -141,6 +149,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             default:
                 break;
         }
+        updateSensorStatsUi();
     }
 
     @Override
@@ -230,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         applyPermissionRestrictions();
 
         registerConfiguredSensors();
+        updateSensorStatsUi();
 
         if (microphoneEnabled) {
             startMicrophoneRecorder();
@@ -318,6 +328,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } else {
             latestMicPeak = 0;
         }
+        updateSensorStatsUi();
 
         SharedPreferences sharedPref = this.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String mqttTopic = sharedPref.getString(KEY_TOPIC, "");
@@ -345,6 +356,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 "P:" + sendProximity + "," +
                 "S:" + sendSteps + "," +
                 "M:" + sendMic;
+        payloadPreviewVal.setText("Payload: " + message);
 
         try {
             MqttMessage mqttMessage = new MqttMessage(message.getBytes());
@@ -381,6 +393,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
         client = null;
+        updateSensorStatsUi();
     }
 
     public void handleClick(View v) {
@@ -396,6 +409,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onResume();
         loadSettings();
         registerConfiguredSensors();
+        updateSensorStatsUi();
     }
 
     @Override
@@ -423,6 +437,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (publishIntervalMs < 1000L) {
             publishIntervalMs = 1000L;
         }
+        updateSensorStatsUi();
     }
 
     private long readPublishIntervalMs(SharedPreferences sharedPref) {
@@ -463,6 +478,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (stepCounterEnabled && stepCounterSensor != null) {
             sensorManager.registerListener(this, stepCounterSensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
+        updateSensorStatsUi();
     }
 
     private void unregisterAllSensors() {
@@ -502,6 +518,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Toast.LENGTH_LONG
             ).show();
         }
+        updateSensorStatsUi();
     }
 
     private void startMicrophoneRecorder() {
@@ -559,6 +576,45 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             mediaRecorder = null;
         }
         isMicRecorderStarted = false;
+        updateSensorStatsUi();
+    }
+
+    private void updateSensorStatsUi() {
+        xVal.setText(String.format(Locale.US, "Accel X: %.2f", latestX));
+        yVal.setText(String.format(Locale.US, "Accel Y: %.2f", latestY));
+        zVal.setText(String.format(Locale.US, "Accel Z: %.2f", latestZ));
+
+        String lightText = (lightEnabled && lightSensor != null)
+                ? String.format(Locale.US, "L (Light): %.2f lx", latestLight)
+                : "L (Light): N/A";
+        String proximityText = (proximityEnabled && proximitySensor != null)
+                ? String.format(Locale.US, "P (Proximity): %.2f cm", latestProximity)
+                : "P (Proximity): N/A";
+        String stepText = (stepCounterEnabled && stepCounterSensor != null)
+                ? String.format(Locale.US, "S (Steps): %d", latestStepsDelta)
+                : "S (Steps): N/A";
+        String micText = microphoneEnabled
+                ? String.format(Locale.US, "M (Mic peak): %d", latestMicPeak)
+                : "M (Mic peak): N/A";
+
+        lightVal.setText(lightText);
+        proximityVal.setText(proximityText);
+        stepsVal.setText(stepText);
+        micVal.setText(micText);
+
+        payloadPreviewVal.setText(
+                String.format(
+                        Locale.US,
+                        "Payload: X:%.2f,Y:%.2f,Z:%.2f,L:%.2f,P:%.2f,S:%d,M:%d",
+                        latestX,
+                        latestY,
+                        latestZ,
+                        latestLight,
+                        latestProximity,
+                        latestStepsDelta,
+                        latestMicPeak
+                )
+        );
     }
 
     @Override
