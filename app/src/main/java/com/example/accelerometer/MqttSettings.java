@@ -26,11 +26,13 @@ public class MqttSettings extends AppCompatActivity {
     private static final String KEY_LIGHT_ENABLED = "SensorLightEnabled";
     private static final String KEY_STEPS_ENABLED = "SensorStepCounterEnabled";
     private static final String KEY_MIC_ENABLED = "SensorMicrophoneEnabled";
+    private static final String KEY_SEND_EVERY_MESSAGE = "SendEveryMessageMode";
+    private static final String LEGACY_KEY_VK_SEND_EVERY_MESSAGE = "VkSendEveryMessage";
     private static final String KEY_PUBLISH_INTERVAL_MS = "PublishIntervalMs";
 
     private EditText broker, port, topic, username, password;
     private EditText publishIntervalMs;
-    private SwitchCompat accelSwitch, lightSwitch, stepCounterSwitch, micSwitch;
+    private SwitchCompat accelSwitch, lightSwitch, stepCounterSwitch, micSwitch, sendModeSwitch;
     private Button connect;
     private String serverURI;
     private String mqttTopic;
@@ -50,6 +52,7 @@ public class MqttSettings extends AppCompatActivity {
         lightSwitch = findViewById(R.id.switchLight);
         stepCounterSwitch = findViewById(R.id.switchStepCounter);
         micSwitch = findViewById(R.id.switchMicrophone);
+        sendModeSwitch = findViewById(R.id.switchSendEveryMessage);
         connect = findViewById(R.id.btnConnect);
 
         // Загружаем ВСЕ сохраненные настройки
@@ -82,6 +85,7 @@ public class MqttSettings extends AppCompatActivity {
         lightSwitch.setChecked(sharedPref.getBoolean(KEY_LIGHT_ENABLED, true));
         stepCounterSwitch.setChecked(sharedPref.getBoolean(KEY_STEPS_ENABLED, true));
         micSwitch.setChecked(sharedPref.getBoolean(KEY_MIC_ENABLED, true));
+        sendModeSwitch.setChecked(readSendEveryMessageMode(sharedPref));
 
         Log.d("MqttSettings", "Loaded settings - Broker: " + mqttBroker + ", Port: " + mqttPort);
     }
@@ -106,6 +110,13 @@ public class MqttSettings extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    private boolean readSendEveryMessageMode(SharedPreferences sharedPref) {
+        if (sharedPref.contains(KEY_SEND_EVERY_MESSAGE)) {
+            return sharedPref.getBoolean(KEY_SEND_EVERY_MESSAGE, false);
+        }
+        return sharedPref.getBoolean(LEGACY_KEY_VK_SEND_EVERY_MESSAGE, false);
     }
 
     public void connectMqtt(View v) {
@@ -157,6 +168,7 @@ public class MqttSettings extends AppCompatActivity {
         editor.putBoolean(KEY_LIGHT_ENABLED, lightSwitch.isChecked());
         editor.putBoolean(KEY_STEPS_ENABLED, stepCounterSwitch.isChecked());
         editor.putBoolean(KEY_MIC_ENABLED, micSwitch.isChecked());
+        editor.putBoolean(KEY_SEND_EVERY_MESSAGE, sendModeSwitch.isChecked());
         editor.putLong(KEY_PUBLISH_INTERVAL_MS, parsedIntervalMs);
 
         // Применяем изменения

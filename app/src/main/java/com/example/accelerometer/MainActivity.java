@@ -53,6 +53,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String KEY_LIGHT_ENABLED = "SensorLightEnabled";
     private static final String KEY_STEPS_ENABLED = "SensorStepCounterEnabled";
     private static final String KEY_MIC_ENABLED = "SensorMicrophoneEnabled";
+    private static final String KEY_SEND_EVERY_MESSAGE = "SendEveryMessageMode";
+    private static final String LEGACY_KEY_VK_SEND_EVERY_MESSAGE = "VkSendEveryMessage";
     private static final String KEY_PUBLISH_INTERVAL_MS = "PublishIntervalMs";
     private static final int REQUEST_PERMISSIONS_CODE = 1201;
 
@@ -76,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean lightEnabled = true;
     private boolean stepCounterEnabled = true;
     private boolean microphoneEnabled = true;
+    private boolean sendEveryMessageMode = false;
     private long publishIntervalMs = 5000L;
 
     private float latestX = 0f;
@@ -413,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         lightEnabled = sharedPref.getBoolean(KEY_LIGHT_ENABLED, true);
         stepCounterEnabled = sharedPref.getBoolean(KEY_STEPS_ENABLED, true);
         microphoneEnabled = sharedPref.getBoolean(KEY_MIC_ENABLED, true);
+        sendEveryMessageMode = readSendEveryMessageMode(sharedPref);
         publishIntervalMs = readPublishIntervalMs(sharedPref);
         if (publishIntervalMs < 1000L) {
             publishIntervalMs = 1000L;
@@ -441,6 +445,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
             }
         }
+    }
+
+    private boolean readSendEveryMessageMode(SharedPreferences sharedPref) {
+        if (sharedPref.contains(KEY_SEND_EVERY_MESSAGE)) {
+            return sharedPref.getBoolean(KEY_SEND_EVERY_MESSAGE, false);
+        }
+        return sharedPref.getBoolean(LEGACY_KEY_VK_SEND_EVERY_MESSAGE, false);
     }
 
     private void registerConfiguredSensors() {
@@ -600,6 +611,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (microphoneEnabled) {
             appendPayloadSegment(builder, "M", String.valueOf(latestMicPeak));
         }
+        appendPayloadSegment(builder, "MODE", sendEveryMessageMode ? "1" : "0");
 
         return builder.toString();
     }

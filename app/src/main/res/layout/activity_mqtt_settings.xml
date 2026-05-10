@@ -103,6 +103,20 @@
             android:checked="true"
             android:text="Microphone peak (M)" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Notification delivery mode"
+            android:textStyle="bold" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchSendEveryMessage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="Send notification for every payload (if OFF: only warnings)" />
+
         <Button
             android:id="@+id/btnConnect"
             android:layout_width="match_parent"
