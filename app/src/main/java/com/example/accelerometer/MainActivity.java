@@ -332,19 +332,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         Log.d("MainActivity", "Publishing to topic: " + mqttTopic);
 
-        float sendX = (accelerometerEnabled && accelerometer != null) ? latestX : 0f;
-        float sendY = (accelerometerEnabled && accelerometer != null) ? latestY : 0f;
-        float sendZ = (accelerometerEnabled && accelerometer != null) ? latestZ : 0f;
-        float sendLight = (lightEnabled && lightSensor != null) ? latestLight : 0f;
-        long sendSteps = (stepCounterEnabled && stepCounterSensor != null) ? latestStepsDelta : 0L;
-        int sendMic = microphoneEnabled ? latestMicPeak : 0;
-
-        String message = "X:" + sendX + "," +
-                "Y:" + sendY + "," +
-                "Z:" + sendZ + "," +
-                "L:" + sendLight + "," +
-                "S:" + sendSteps + "," +
-                "M:" + sendMic;
+        String message = buildPayloadMessage();
+        if (message.isEmpty()) {
+            Log.w("MainActivity", "Skipped publish: no active sensors selected in settings");
+            return;
+        }
         payloadPreviewVal.setText("Payload: " + message);
 
         try {
@@ -583,18 +575,40 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         stepsVal.setText(stepText);
         micVal.setText(micText);
 
-        payloadPreviewVal.setText(
-                String.format(
-                        Locale.US,
-                        "Payload: X:%.2f,Y:%.2f,Z:%.2f,L:%.2f,S:%d,M:%d",
-                        latestX,
-                        latestY,
-                        latestZ,
-                        latestLight,
-                        latestStepsDelta,
-                        latestMicPeak
-                )
-        );
+        String previewMessage = buildPayloadMessage();
+        if (previewMessage.isEmpty()) {
+            payloadPreviewVal.setText("Payload: no active sensors selected");
+        } else {
+            payloadPreviewVal.setText("Payload: " + previewMessage);
+        }
+    }
+
+    private String buildPayloadMessage() {
+        StringBuilder builder = new StringBuilder();
+
+        if (accelerometerEnabled && accelerometer != null) {
+            appendPayloadSegment(builder, "X", String.format(Locale.US, "%.2f", latestX));
+            appendPayloadSegment(builder, "Y", String.format(Locale.US, "%.2f", latestY));
+            appendPayloadSegment(builder, "Z", String.format(Locale.US, "%.2f", latestZ));
+        }
+        if (lightEnabled && lightSensor != null) {
+            appendPayloadSegment(builder, "L", String.format(Locale.US, "%.2f", latestLight));
+        }
+        if (stepCounterEnabled && stepCounterSensor != null) {
+            appendPayloadSegment(builder, "S", String.valueOf(latestStepsDelta));
+        }
+        if (microphoneEnabled) {
+            appendPayloadSegment(builder, "M", String.valueOf(latestMicPeak));
+        }
+
+        return builder.toString();
+    }
+
+    private void appendPayloadSegment(StringBuilder builder, String key, String value) {
+        if (builder.length() > 0) {
+            builder.append(",");
+        }
+        builder.append(key).append(":").append(value);
     }
 
     @Override
