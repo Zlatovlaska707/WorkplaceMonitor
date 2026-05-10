@@ -107,13 +107,33 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/payloadPreviewValue"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="Payload: X:0.0,Y:0.0,Z:0.0,L:0.0,S:0,M:0"
-            android:textSize="14sp" />
+            android:layout_marginTop="14dp"
+            android:background="#EAF2FF"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="MQTT Payload Preview"
+                android:textColor="#1A237E"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/payloadPreviewValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:fontFamily="monospace"
+                android:text="Payload: X:0.0,Y:0.0,Z:0.0,L:0.0,S:0,M:0"
+                android:textColor="#0D1B44"
+                android:textIsSelectable="true"
+                android:textSize="16sp" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
