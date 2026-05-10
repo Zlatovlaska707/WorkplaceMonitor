@@ -11,9 +11,27 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.appcompat.widget.SwitchCompat;
+
 public class MqttSettings extends AppCompatActivity {
 
+    private static final String PREFS_NAME = "MySharedPref";
+    private static final String KEY_TOPIC = "Topic";
+    private static final String KEY_SERVER_URI = "serverURI";
+    private static final String KEY_BROKER = "Broker";
+    private static final String KEY_PORT = "Port";
+    private static final String KEY_USERNAME = "Username";
+    private static final String KEY_PASSWORD = "Password";
+    private static final String KEY_ACCEL_ENABLED = "SensorAccelerometerEnabled";
+    private static final String KEY_LIGHT_ENABLED = "SensorLightEnabled";
+    private static final String KEY_PROXIMITY_ENABLED = "SensorProximityEnabled";
+    private static final String KEY_STEPS_ENABLED = "SensorStepCounterEnabled";
+    private static final String KEY_MIC_ENABLED = "SensorMicrophoneEnabled";
+    private static final String KEY_PUBLISH_INTERVAL_MS = "PublishIntervalMs";
+
     private EditText broker, port, topic, username, password;
+    private EditText publishIntervalMs;
+    private SwitchCompat accelSwitch, lightSwitch, proximitySwitch, stepCounterSwitch, micSwitch;
     private Button connect;
     private String serverURI;
     private String mqttTopic;
@@ -28,6 +46,12 @@ public class MqttSettings extends AppCompatActivity {
         topic = findViewById(R.id.txtTopic);
         username = findViewById(R.id.txtUsername);
         password = findViewById(R.id.pwPassword);
+        publishIntervalMs = findViewById(R.id.txtPublishIntervalMs);
+        accelSwitch = findViewById(R.id.switchAccelerometer);
+        lightSwitch = findViewById(R.id.switchLight);
+        proximitySwitch = findViewById(R.id.switchProximity);
+        stepCounterSwitch = findViewById(R.id.switchStepCounter);
+        micSwitch = findViewById(R.id.switchMicrophone);
         connect = findViewById(R.id.btnConnect);
 
         // Загружаем ВСЕ сохраненные настройки
@@ -38,14 +62,15 @@ public class MqttSettings extends AppCompatActivity {
      * Загружает все сохраненные настройки из SharedPreferences
      */
     private void loadSavedSettings() {
-        SharedPreferences sharedPref = this.getSharedPreferences("MySharedPref", Context.MODE_PRIVATE);
+        SharedPreferences sharedPref = this.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
         // Загружаем Broker и Port (их не было в загрузке!)
-        String mqttBroker = sharedPref.getString("Broker", "");
-        String mqttPort = sharedPref.getString("Port", "");
-        String mqttTopic = sharedPref.getString("Topic", "");
-        String mqttUsername = sharedPref.getString("Username", "");
-        String mqttPassword = sharedPref.getString("Password", "");
+        String mqttBroker = sharedPref.getString(KEY_BROKER, "");
+        String mqttPort = sharedPref.getString(KEY_PORT, "");
+        String mqttTopic = sharedPref.getString(KEY_TOPIC, "");
+        String mqttUsername = sharedPref.getString(KEY_USERNAME, "");
+        String mqttPassword = sharedPref.getString(KEY_PASSWORD, "");
+        long savedIntervalMs = readPublishIntervalMs(sharedPref);
 
         // Устанавливаем значения в поля ввода
         broker.setText(mqttBroker);
@@ -53,8 +78,37 @@ public class MqttSettings extends AppCompatActivity {
         topic.setText(mqttTopic);
         username.setText(mqttUsername);
         password.setText(mqttPassword);
+        publishIntervalMs.setText(String.valueOf(savedIntervalMs));
+
+        accelSwitch.setChecked(sharedPref.getBoolean(KEY_ACCEL_ENABLED, true));
+        lightSwitch.setChecked(sharedPref.getBoolean(KEY_LIGHT_ENABLED, true));
+        proximitySwitch.setChecked(sharedPref.getBoolean(KEY_PROXIMITY_ENABLED, true));
+        stepCounterSwitch.setChecked(sharedPref.getBoolean(KEY_STEPS_ENABLED, true));
+        micSwitch.setChecked(sharedPref.getBoolean(KEY_MIC_ENABLED, true));
 
         Log.d("MqttSettings", "Loaded settings - Broker: " + mqttBroker + ", Port: " + mqttPort);
+    }
+
+    private long readPublishIntervalMs(SharedPreferences sharedPref) {
+        long defaultValue = 5000L;
+        try {
+            return sharedPref.getLong(KEY_PUBLISH_INTERVAL_MS, defaultValue);
+        } catch (ClassCastException ignored) {
+            try {
+                int legacyValue = sharedPref.getInt(KEY_PUBLISH_INTERVAL_MS, (int) defaultValue);
+                sharedPref.edit().putLong(KEY_PUBLISH_INTERVAL_MS, legacyValue).apply();
+                return legacyValue;
+            } catch (ClassCastException ignoredAgain) {
+                String legacyString = sharedPref.getString(KEY_PUBLISH_INTERVAL_MS, String.valueOf(defaultValue));
+                try {
+                    long parsed = Long.parseLong(legacyString);
+                    sharedPref.edit().putLong(KEY_PUBLISH_INTERVAL_MS, parsed).apply();
+                    return parsed;
+                } catch (Exception e) {
+                    return defaultValue;
+                }
+            }
+        }
     }
 
     public void connectMqtt(View v) {
@@ -77,18 +131,37 @@ public class MqttSettings extends AppCompatActivity {
 
         Log.d("MqttSettings", "Server URI: " + serverURI);
 
-        SharedPreferences sharedPref = this.getSharedPreferences("MySharedPref", Context.MODE_PRIVATE);
+        long parsedIntervalMs;
+        try {
+            parsedIntervalMs = Long.parseLong(publishIntervalMs.getText().toString().trim());
+        } catch (Exception e) {
+            Toast.makeText(this, "Publish interval must be a number", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (parsedIntervalMs < 1000L) {
+            Toast.makeText(this, "Publish interval must be >= 1000 ms", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SharedPreferences sharedPref = this.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
 
         mqttTopic = topic.getText().toString();
 
         // Сохраняем ВСЕ поля
-        editor.putString("Topic", mqttTopic);
-        editor.putString("serverURI", serverURI);
-        editor.putString("Broker", broker.getText().toString());
-        editor.putString("Port", port.getText().toString());
-        editor.putString("Username", username.getText().toString());
-        editor.putString("Password", password.getText().toString());
+        editor.putString(KEY_TOPIC, mqttTopic);
+        editor.putString(KEY_SERVER_URI, serverURI);
+        editor.putString(KEY_BROKER, broker.getText().toString());
+        editor.putString(KEY_PORT, port.getText().toString());
+        editor.putString(KEY_USERNAME, username.getText().toString());
+        editor.putString(KEY_PASSWORD, password.getText().toString());
+        editor.putBoolean(KEY_ACCEL_ENABLED, accelSwitch.isChecked());
+        editor.putBoolean(KEY_LIGHT_ENABLED, lightSwitch.isChecked());
+        editor.putBoolean(KEY_PROXIMITY_ENABLED, proximitySwitch.isChecked());
+        editor.putBoolean(KEY_STEPS_ENABLED, stepCounterSwitch.isChecked());
+        editor.putBoolean(KEY_MIC_ENABLED, micSwitch.isChecked());
+        editor.putLong(KEY_PUBLISH_INTERVAL_MS, parsedIntervalMs);
 
         // Применяем изменения
         editor.apply();
