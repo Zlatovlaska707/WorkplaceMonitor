@@ -1,195 +1,145 @@
-<div id="top"></div>
+# WorkplaceMonitor Android IoT
+
+Android-приложение для мониторинга качества рабочего места и состояния работника.  
+Собирает телеметрию с датчиков устройства, отправляет ее по MQTT (в том числе в Yandex IoT Core) и поддерживает интеграцию с внешними сервисами уведомлений.
+
+
+## Возможности
+
+- Сбор данных с датчиков:
+  - акселерометр (`X`, `Y`, `Z`);
+  - освещенность (`L`);
+  - шагомер (`S`);
+  - микрофон peak (`M`).
+- Гибкая конфигурация в `Settings`:
+  - параметры MQTT;
+  - включение/выключение датчиков;
+  - интервал публикации;
+  - режим уведомлений (`MODE`).
+- Безопасное MQTT-подключение по TLS.
+- Динамический payload: отключенные датчики не отправляются.
+- Превью отправляемой строки на главном экране.
+- Интеграция с внешним alerting-слоем (боты/скрипты/Cloud Functions).
+
+## Технологический стек
+
+| Компонент | Технология |
+|---|---|
+| Мобильное приложение | Android (Java) |
+| UI | AndroidX AppCompat + Material |
+| Протокол передачи | MQTT |
+| MQTT клиент | Eclipse Paho (`mqttv3`, `android.service`) |
+| Сенсоры | `SensorManager` / `SensorEventListener` |
+| Аудиопик | `MediaRecorder.getMaxAmplitude()` |
+| Хранение настроек | `SharedPreferences` |
+| TLS | `SSLSocketFactory` + `assets/rootca.crt` |
+
+## Требования
+
+- Android 9.0+ (API 28+);
+- Интернет-соединение;
+- MQTT-брокер (например, Yandex IoT Core);
+- Желательные датчики:
+  - `TYPE_ACCELEROMETER`
+  - `TYPE_LIGHT`
+  - `TYPE_STEP_COUNTER`
+  - микрофон
+
+Приложение корректно работает при отсутствии части датчиков: неактивные/недоступные поля исключаются из payload.
+
+## Структура проекта
+
+```text
+WorkplaceMonitor/
+├─ app/                                              # Android-модуль приложения
+│  ├─ build.gradle                                   # зависимости и параметры сборки модуля
+│  └─ src/main/
+│     ├─ AndroidManifest.xml                         # permissions, activity/service declarations
+│     ├─ assets/
+│     │  └─ rootca.crt                               # CA-сертификат для TLS MQTT
+│     ├─ java/com/example/accelerometer/
+│     │  ├─ MainActivity.java                        # сбор датчиков, payload, MQTT publish, главный экран
+│     │  ├─ MqttSettings.java                        # экран настроек и сохранение конфигурации
+│     │  ├─ SplashScreen.java                        # стартовый экран
+│     │  └─ AboutUs.java                             # информационный экран
+│     └─ res/
+│        ├─ layout/
+│        │  ├─ activity_main.xml                     # UI главного экрана (Sensor Data + Payload Preview)
+│        │  ├─ activity_mqtt_settings.xml            # UI экрана настроек
+│        │  ├─ activity_splash_screen.xml            # UI splash-экрана
+│        │  └─ activity_about_us.xml                 # UI экрана About
+│        └─ xml/
+│           └─ network_security_config.xml           # доверенные домены/политика network security
+├─ NodeREDDashbaord/
+│  └─ flows.json                                     # пример Node-RED flow для приема/визуализации MQTT данных
+├─ docs/
+│  ├─ USER_GUIDE_RU.md                               # подробная пользовательская документация
+│  └─ TECHNICAL_DOCUMENTATION_RU.md                  # подробная техническая документация
+└─ README.md                                         # краткая обзорная документация проекта
+```
+
+## Быстрый старт
+
+1. Клонируйте репозиторий:
+   ```bash
+   git clone <your-repo-url>
+   cd WorkplaceMonitor
+   ```
+2. Откройте проект в Android Studio.
+3. Дождитесь `Gradle Sync`.
+4. Соберите APK:
+   - через меню `Build > Build APK(s)`, или
+   - командой:
+     ```bash
+     ./gradlew assembleDebug
+     ```
+5. Установите приложение на устройство.
+6. Заполните настройки подключения и нажмите `Save settings`.
+7. На главном экране нажмите `Start`.
+
+## Настройка Yandex IoT Core
+
+На экране `Settings` укажите:
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIan][linkedin-shield]][linkedin-url]
+- `Broker`: `ssl://mqtt.cloud.yandex.net`
+- `Port`: `8883`
+- `Topic`: `$devices/<device-id>/events`
+- `Username`: MQTT username
+- `Password`: MQTT password
 
+После сохранения настроек:
+1. Нажмите `Start`.
+2. Убедитесь, что в приложении есть `Payload Preview`.
+3. Проверьте входящие сообщения у подписчика.
 
+## Настройка бота (кратко)
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/Nauman3S/iot-starter-android">
-    <img src="images/iot-starter-logo.png" alt="Logo" width="200" height="200">
-  </a>
+Приложение не отправляет сообщения в мессенджер напрямую.  
+Оно публикует MQTT-телеметрию, включая режим уведомлений:
+- `MODE:1` — уведомление на каждое сообщение;
+- `MODE:0` — уведомление только при предупреждениях.
 
-  <h3 align="center">IoT Starter for Android</h3>
+Рекомендуемая схема:
+1. MQTT -> 2. Cloud Function/Python Worker -> 3. Bot API (VK/Telegram/др.).
 
-  <p align="center">
-    This is an IoT starter project to send phone's accelerometer data to NodeRED over MQTT.
-    <br />
-   
-  </p>
-</div>
+## Формат payload
 
+Пример:
+```text
+X:0.03,Y:9.81,Z:0.12,L:325.40,S:21,M:38,MODE:0
+```
 
+Поля неактивных датчиков не отправляются.
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
-  </ol>
-</details>
+## Документация
 
+- Подробная пользовательская: `docs/USER_GUIDE_RU.md`
+- Подробная техническая: `docs/TECHNICAL_DOCUMENTATION_RU.md`
 
+## Типовые проблемы
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+- `UnknownHostException` — неверный `Broker` (опечатка/не тот домен).
+- `S (Steps): N/A` — нет шагомера или не выдано `ACTIVITY_RECOGNITION`.
+- `Microphone start failed` — нет `RECORD_AUDIO` или микрофон занят.
 
-![NodeRED Dashboard](images/scr17.png)
 
-There are a number of IoT Starter Projects out there for you to explore. The purpose of this project is to provide you with an easy to use example of an IoT Project with the latest tech-trends in IoT space. This project doesn't require any hardware and make use of your Android Smartphone accelerometer sensor.
-
-How it works?
-
-This project has 3 parts.
-* An android smartphone app to collect phone accelerometer data and send it to node-red dashboard over MQTT.
-* An MQTT Broker(running on a Ubuntu Server) to receive data from smartphone app and forward it to NodeRED dashboard for visualization.
-* A NodeRED app running on IBM Cloud to visualize the accelerometer data in real-time.
-
-Once you run this project succesfully, you will be able to implement same set of instructions on your next IoT project.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-### Built With
-
-IoT Starter is built with
-
-* [Android Studio](https://developer.android.com/studio)
-* [NodeRED](https://nodered.org/)
-* [Mosquitto](https://mosquitto.org/)
-* [IBM Cloud](https://www.ibm.com/cloud)
-
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-This section provides a set of instructions on how to run this project.
-
-### Prerequisites
-
-This is a list things you need have.
-
-* Android Studio(optional)
-* IBM Cloud Account
-
-### Installation
-
-1. Compile the andorid app or use APK file and install it on your smartphone.
-2. Make a Classic Ubuntu Server 20.04 instance in your IBM Cloud account and install mosquitto broker on it.
-3. Install NodeRED in your IBM Cloud Account
-4. Install node-red-dashboard in your NodeRED instance.
-5. Import the flow from NodeREDDashboard folder of this repository into your NodeRED dashboard.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Install the compiled android app on your Android Phone and in settings page put the public IP address of your Ubuntu Server 20.04 instance as a broker address and in the topic you can put ``data/val/accelerometer`` and then on the homepage of the app you can press start to start sending the data to the dashboard.
-
-You can visulaize the data on the NodeRED dashboard ui page usually at the address ``http://appURL/ui``
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [x] Add Android App
-- [ ] Add iOS App
-- [ ] Add a standalone hardware example.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the Eclipse Public License 1.0 License. See `LICENSE` for more information.
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
-## Contact
-
-NaumanShakir - [NaumanShakir.com](https://NaumanShakir) - [@Nauman3S](https://twitter.com/Nauman3S) - NaumanShakir3s@gmail.com
-
-Project Link: [https://github.com/Nauman3S/iot-starter-android](https://github.com/Nauman3S/iot-starter-android)
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/Nauman3S/iot-starter-android
-[contributors-url]: https://github.com/Nauman3S/iot-starter-android/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/Nauman3S/iot-starter-android
-[forks-url]: https://github.com/Nauman3S/iot-starter-android/network/members
-[stars-shield]: https://img.shields.io/github/stars/Nauman3S/iot-starter-android
-[stars-url]: https://github.com/Nauman3S/iot-starter-android/stargazers
-[issues-shield]: https://img.shields.io/github/issues/Nauman3S/iot-starter-android
-[issues-url]: https://github.com/Nauman3S/iot-starter-android/issues
-[license-shield]: https://img.shields.io/github/license/Nauman3S/iot-starter-android
-[license-url]: https://github.com/Nauman3S/iot-starter-android/blob/main/LICENSE
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/naumanshakir3s
-[product-screenshot]: images/scr17.png
